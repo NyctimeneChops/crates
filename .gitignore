@@ -11,6 +11,10 @@ secrets/
 neon-files.txt
 env-history.txt
 
+# ---- Handoff document (belongs in the PRIVATE repo only, never here) ----
+ops/HANDOFF.md
+HANDOFF.md
+
 # ---- Throwaway / scratch scripts (README is tracked; scripts are not) ----
 backend/scratch/*
 !backend/scratch/README.md
