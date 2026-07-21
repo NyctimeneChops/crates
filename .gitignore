@@ -1,0 +1,52 @@
+# ---- Secrets & environment ----
+.env
+.env.*
+!.env.example
+backend/.env
+*.key
+*.pem
+secrets/
+
+# ---- Forensic artifacts (credential-exposure incident) ----
+neon-files.txt
+env-history.txt
+
+# ---- Throwaway / scratch scripts (README is tracked; scripts are not) ----
+backend/scratch/*
+!backend/scratch/README.md
+test_*.py
+fix_*.py
+seed_*.py
+
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# ---- Node / frontend build ----
+node_modules/
+frontend/dist/
+
+# ---- Local tooling ----
+.claude/
+
+# ---- OS ----
+.DS_Store
+
+# ---- Logs ----
+*.log
+
+# ---- Audio & Ableton session files (never commit media or sessions) ----
+*.als
+*.asd
+*.wav
+*.aiff
+*.mp3
+Ableton Project Info/
+
+# ---- Image assets pending provenance review (kept on disk, excluded from VCS) ----
+frontend/src/assets/hero.png
+frontend/public/favicon.svg
+frontend/public/icons.svg
