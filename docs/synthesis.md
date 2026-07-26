@@ -77,7 +77,7 @@ Design commitments:
 
 ### 4.2 Crates Studio: the teaching mode
 
-Errorless learning, drawn from applied behavior analysis, applied to digital audio workstation skill acquisition. This is specified in full in `03-PEDAGOGY.md` and it is the single most defensible asset in the company.
+Errorless learning, drawn from applied behavior analysis, applied to digital audio workstation skill acquisition. This is specified in full in `pedagogy.md` and it is the single most defensible asset in the company.
 
 The short version: the tool teaches by constraining the environment so that the correct action is the available action, then systematically fading that constraint according to a defined prompt hierarchy until the learner performs independently. The fading protocol is the product roadmap. The Hinge principle, formalized: the exit criteria are written down and measurable.
 
@@ -97,7 +97,7 @@ Closed loop: material can only enter a user's DAW through the service, and the p
 
 The existing product. No search, no genre picking, no global taste profile, fully isolated journeys, an algorithm that rewards new likes on unheard music.
 
-Session data enters as **additional parameters in an existing feature space** alongside Essentia audio analysis and Music Genome Project-inspired attributes. It is not a replacement predictor and no claim is made that production similarity predicts listener taste. That is an open empirical question (see `04-RISK-REGISTER.md`, R-11).
+Session data enters as **additional parameters in an existing feature space** alongside Essentia audio analysis and Music Genome Project-inspired attributes. It is not a replacement predictor and no claim is made that production similarity predicts listener taste. That is an open empirical question (see `crates-internal/risk-register.md`, R-19).
 
 The scaling move, and the more important one: train a model to predict session-derived attributes from audio alone, using the subset of tracks that have both. Then apply it to the whole catalog. This turns a few thousand uploaded sessions into a better analyzer for millions of tracks that will never have a session uploaded, and it is the answer to the cold start problem.
 
@@ -146,7 +146,7 @@ This is logged as an accepted bet in the risk register. The company is not built
 | Educate, document, and make the case with evidence | Organize, coordinate, or facilitate collective refusal |
 | Build split sheet infrastructure | Publish a public page arguing why antitrust law does not apply to us |
 
-The legal reasoning for the right-hand column is in `05-LEGAL-BRIEF.md`, section 6. In short: coordinated refusal by independent contractors is a group boycott, the leading case went badly for a far more sympathetic set of plaintiffs, and a platform that provides the coordination mechanism can be pulled in as the hub even without intending to organize anything. The split sheet infrastructure does more real work than the movement anyway, because it changes documentation at the moment of creation rather than requiring anyone to have an epiphany.
+The legal reasoning for the right-hand column is in `crates-internal/legal-brief.md`, section 6. In short: coordinated refusal by independent contractors is a group boycott, the leading case went badly for a far more sympathetic set of plaintiffs, and a platform that provides the coordination mechanism can be pulled in as the hub even without intending to organize anything. The split sheet infrastructure does more real work than the movement anyway, because it changes documentation at the moment of creation rather than requiring anyone to have an epiphany.
 
 ---
 
@@ -174,7 +174,7 @@ The legal reasoning for the right-hand column is in `05-LEGAL-BRIEF.md`, section
 
 ### Decided
 
-- Ableton Live is the integration target. Not FL Studio (see `02-TECHNICAL-ARCHITECTURE.md` section 6 for the API analysis). REAPER is an internal prototyping bench only, never a shipped or demoed surface.
+- Ableton Live is the integration target. Not FL Studio (see `technical-architecture.md` section 6 for the API analysis). REAPER is an internal prototyping bench only, never a shipped or demoed surface.
 - Sessions, not masters. Upload model, not analysis-of-recordings model.
 - Independent artists only. No major label catalog, at any stage.
 - Result detection over input blocking for v1 of the teaching mode.
@@ -184,7 +184,7 @@ The legal reasoning for the right-hand column is in `05-LEGAL-BRIEF.md`, section
 
 ### Open
 
-- Whether production-decision similarity carries signal for listener taste. Resolvable by offline experiment on existing data. See risk register R-11.
+- Whether production-decision similarity carries signal for listener taste. See risk register R-19. NOTE 2026-07-25: this is currently BLOCKED, not merely open. The experiment needs multiple listeners to correlate and the service has one user.
 - Entity conversion path: whether steward ownership or cooperative conversion is a real destination or a stated intention. Depends on financing structure chosen at entry.
 - Whether OS-level input blocking is ever built, or whether environmental constraint is sufficient permanently.
 - Pricing. Entirely undetermined. No financial model should be produced until there are users.

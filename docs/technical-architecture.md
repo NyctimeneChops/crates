@@ -1,6 +1,6 @@
 # Crates: Technical Architecture
 
-**Status:** Working spec. Derives from `01-SYNTHESIS.md`.
+**Status:** Working spec. Derives from `synthesis.md`.
 **Date:** 21 July 2026
 
 ---
@@ -171,6 +171,171 @@ The "shape of your taste" report. Top sounds by weighted usage, category distrib
 
 ---
 
+### 3.6 Amendment, 2026-07-25: the settled crawler design
+
+Sections 3.1 to 3.5 were written on 2026-07-21 and describe the crawler at the
+level it had been thought through then. The design was carried considerably
+further in conversation afterwards and was never written back here, so it
+survived only in a session handoff document. This section closes that gap.
+
+Where this section and 3.1 to 3.5 disagree, this section is later and wins. The
+specific supersessions are noted inline.
+
+#### 3.6.1 The primary output is a category-scoped ranking
+
+Kicks compete with kicks, pads with pads, devices with devices. A global ranking
+over an undifferentiated asset pool answers a question nobody asked. This follows
+the original framing: "organize all my drum sounds by the ones I actually use
+most." The global concentration curve remains, as a secondary summary.
+
+Samples and devices never share a ranking. The taxonomy is two levels, family and
+type; ranking is scoped at type with family as the rollup.
+
+#### 3.6.2 Scoring: gated presence as the base, bounded bonuses to differentiate
+
+**Supersedes 3.2.** Audible or timeline extent was rejected as a base signal
+because it measures sustain and density, which track instrument *role* rather
+than commitment, and the bias is systematic: pads score high for doing nothing
+and a defining one-shot scores low. If a continuous base is wanted, use section
+coverage rather than timeline extent.
+
+- **Base:** presence, gated. Section coverage is binary per section (an asset
+  counts a section if it sounds anywhere within it), normalised by `n_sections`.
+  For sessions without locators, divide the arrangement into a fixed number of
+  equal-duration bins as pseudo-sections.
+- **Gate to zero:** every instance muted, or the asset present only on a track
+  holding no clips.
+- **Bonuses, each bounded and additive:** automation on the track or on a device
+  parameter in its chain; non-default downstream processing; the track renamed
+  from Ableton's default, a small deliberate act that correlates with intent; the
+  clip worked rather than dropped (warp markers moved, transposed, non-zero start
+  offset, length differing from source).
+- **Aggregation:** per-session score capped at 1, then summed across sessions,
+  because a favourite is something reached for across many projects rather than
+  used forty times in one. Report breadth (count of sessions above a threshold)
+  as a column separate from depth (summed score). Where they disagree is
+  interesting output, not noise.
+
+**"Survived to end of session" is dropped from v1.** It is listed in 3.2 and it
+is not observable from a single saved `.als`: a saved set is the end state, so
+everything visible survived by definition. It returns only under revision
+diffing.
+
+#### 3.6.3 Two problems the parser must solve rather than defer
+
+**Backup folders.** Ableton auto-creates a `Backup/` subdirectory of timestamped
+saves in every project. A naive drive walk finds them all, inflating N by an
+order of magnitude and polluting the concentration curve with near-duplicate
+snapshots that content hashing will not dedupe. Do **not** simply exclude them.
+They are a free automatic revision history, which is exactly the opportunistic
+corpus 3.3 describes. Treat them as a distinct class: excluded from N and from
+scoring, retained and indexed.
+
+**Drum Racks, Instrument Racks, and multi-sample instruments.** A Drum Rack sits
+on one track and holds many samples across chains. At (session, track, asset)
+grain every pad inherits identical track-level signals, and unplayed pads from a
+loaded preset score as present. That breaks the flagship "which drums do I
+actually use" output entirely. Presence must resolve at chain level: a sample
+counts only if MIDI notes in the track's clips trigger its chain, via the chain's
+receive note range. Note count per pad is also a better presence signal than
+anything available at track level. This likely needs a nullable `chain_id` on the
+occurrences grain.
+
+**Chain resolution is not a refinement. It is the parser's main job for the
+flagship output.**
+
+#### 3.6.4 Categorisation: a precedence cascade
+
+Each assignment logs which rule fired and at what specificity, so failures are
+auditable.
+
+1. Manual override file (`category_overrides.yaml`, matching content hash or path
+   glob). Always wins. This is the correction loop, not a fallback.
+2. Device identifier lookup. Native Ableton devices are enumerable and exact;
+   third party via a maintained name map.
+3. Path heuristics. Directory tokens against a keyword lexicon, deepest match
+   winning. Sample packs curate folders, so this carries most of the load.
+4. Filename patterns. Tokenise, strip BPM/key/index, match the lexicon plus
+   standard abbreviations (BD, SD, CH, OH, HH).
+5. Length and warp heuristic, separating one-shot from loop within a family.
+6. Unknown, **sorted by weighted score**, so the roughly twenty hand-written
+   overrides are the twenty that actually move the output. The tail is never
+   triaged.
+
+`recorded` (self-recorded and render directories) is separated early, because it
+makes the eventual third-party classification problem tractable. Publish the
+coverage number in the README: "78% auto-categorised, 14% override, 8% unknown"
+is itself a result. Audio-based classification is deferred to v2, in writing, so
+that it reads as a decision rather than an omission.
+
+#### 3.6.5 Schema: five tables, Parquet on disk, small CSV extract in `sample-output/`
+
+- `crawl_runs` — the honesty layer. Tool, lexicon and weight-config versions,
+  supported version range, files found, parsed, skipped-unsupported, parse-failed.
+  Nothing skipped silently.
+- `sessions` — per set. Version, schema variant, parse status and error,
+  `project_group_id` (collapses v1/v2/v3 into one project and enables revision
+  diffing), track count, `has_arrangement`, `has_locators`, `n_sections`, tempo,
+  time signature.
+- `assets` — per sample or device. Identity basis, hashes and identifiers,
+  resolution status, category family, type, method, specificity, conflict.
+- `occurrences` — the long-format fact table at (session, track, asset) grain,
+  likely plus `chain_id`. Track name and whether default, clip counts,
+  `in_arrangement`, `sections_covered`, mute and solo, automation presence and
+  parameter count, downstream device count, non-default processing, clip-edit
+  flags. Track grain rather than session grain, so note-level features attach
+  later without a migration.
+- `scores` — a derived view at (session, asset), recomputed rather than stored by
+  hand: gated, `base_presence`, `section_coverage`, the bonus terms, and C.
+
+**Separating `scores` from `occurrences` is what makes the sensitivity sweep
+cheap:** parse once, then recompute scores hundreds of times against different
+weight configs without touching an `.als` again.
+
+Category rankings and the concentration curve are both views over `scores` joined
+to `assets`. Neither is a pipeline.
+
+#### 3.6.6 Calibration, which is what makes it a result
+
+There is no ground truth, so a reviewer will say the weights were chosen to
+produce the answer. Preempt it. Weights live in a config file, and a **sensitivity
+sweep** randomises them within bounds a few hundred times and reports rank
+stability of the top 50. If the concentration curve holds its shape and the top of
+the ranking barely moves, the finding is about the library rather than the
+weighting. If it does not hold, that is also a finding and is stated.
+
+README framing discipline: the output is an **ordinal ranking of commitment**,
+never a *measure of preference*.
+
+#### 3.6.7 The shared extraction point
+
+The crawler and the offline imputation study want the same feature-extraction
+layer and the same long-format table. Build the table first; the crawler report is
+a view over it. `scores` needs session-level aggregates for the study, and the
+perceptual versus process-only split (5.4) is a column tag on the asset table,
+not a second pipeline.
+
+#### 3.6.8 Step 0: `inventory.py`
+
+Walks for `*.als`, classifies each as primary, backup, or orphan, reads only the
+`<Ableton ...>` gzip-header tag for version attributes, content-hashes files,
+flags factory and pack paths separately, and prints N, the revision corpus, and
+the schema histogram.
+
+Run it against actual music and project directories, not a full `C:\` walk, which
+is slow and mostly empty. Before N means anything, check the orphan heuristic (the
+script now labels weak classifications explicitly and reports them as a separate
+count) and confirm the backup-timestamp regex holds for older Live versions.
+
+The two numbers gate everything downstream. If the version histogram is one or two
+versions wide, the parser is a normal afternoon. If it spans Live 9 through 12,
+scope v1 to the dominant version and report the skipped count. Eyeball
+backups-per-project too: a median of two means the revision corpus is thin and
+stays opportunistic, a median of twenty means it is a real dataset that may deserve
+to move up the build order.
+
+---
+
 ## 4. Component C: Library ingestion
 
 Only touches the shared zone. Gated on counsel and on formation.
@@ -296,7 +461,7 @@ Ableton's remote script interface is undocumented and tolerated, not supported. 
 | T-02 | Live's UI state is not exposed by the LOM (no cursor, focus, or panel state) | High | Deferred | v1 uses result detection, not input interception. v2 requires a perception layer. |
 | T-03 | Live is custom-drawn, so the macOS accessibility tree is sparse | High | Open | The v2 perception layer likely needs computer vision or a vision model on screenshots. Latency and cost unknown. This is the real engineering hire. |
 | T-04 | Third-party samples inside uploaded sessions | Critical | Design solved, legally open | Proxy substitution, section 4.1. Needs counsel sign-off. |
-| T-05 | Sample path references break when libraries move | Medium | Accepted | Fuzzy reconciliation; surface unresolved rate honestly |
+| T-05 | Sample path references break when libraries move | Low | Accepted | Fuzzy reconciliation; surface unresolved rate honestly |
 | T-06 | Ableton may break the remote script interface | Medium | Accepted | Version pinning, fast patch cadence, disclosed as risk |
 | T-07 | Cold start on session corpus | High | Mitigated | Imputation model, section 5.3 |
 | T-08 | Export prevention is unenforceable | Medium | Accepted | Architectural where possible, contractual otherwise; never claimed to counterparties |
@@ -313,13 +478,13 @@ Each step is independently useful and gated only on the one before it.
 
 **1. The crawler.** Local, no server, no legal review, days of work. Produces the shape-of-your-taste report.
 
-**2. The offline feature experiment.** Using existing Essentia analysis on the current catalog plus whatever session data is available, test whether production-decision similarity predicts listener co-liking better than audio similarity alone. Either justifies the discovery claim or redirects it toward education and collaboration matching. See risk register R-11.
+**2. The offline feature experiment.** Using existing Essentia analysis on the current catalog plus whatever session data is available, test whether production-decision similarity predicts listener co-liking better than audio similarity alone. Either justifies the discovery claim or redirects it toward education and collaboration matching. See risk register R-19. NOTE 2026-07-25: BLOCKED until there is a real user base; with one user there is nothing to correlate. It is not, as sometimes stated, replaced by the imputation study (step 9), which serves a different risk (R-08, cold start). Both remain live.
 
 **3. The assistant, end to end, hardcoded.** AbletonOSC plus a script. Prove text to audible clip. Snapshot layer included from the first commit.
 
 **4. The IR, renderer, and local grammar.** Turn the hardcoded proof into an architecture.
 
-**5. Teaching mode, one lesson.** Environmental constraint plus result detection. One complete prompt hierarchy, one fading protocol, per `03-PEDAGOGY.md`.
+**5. Teaching mode, one lesson.** Environmental constraint plus result detection. One complete prompt hierarchy, one fading protocol, per `pedagogy.md`.
 
 **6. The demo.** Songwriters on camera. Requires nothing from step 7 onward.
 

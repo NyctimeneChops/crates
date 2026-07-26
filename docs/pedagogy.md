@@ -1,6 +1,6 @@
 # Crates Studio: Pedagogical Specification
 
-**Status:** Core intellectual asset. Derives from `01-SYNTHESIS.md`.
+**Status:** Core intellectual asset. Derives from `synthesis.md`.
 **Date:** 21 July 2026
 
 ---
@@ -311,7 +311,7 @@ This last point matters practically: Ableton often offers three ways to accompli
 
 ### v2: True response blocking
 
-Requires the perception layer described in `02-TECHNICAL-ARCHITECTURE.md` (T-02, T-03). Adds genuine input interception so that invalid actions are not merely reversed but never occur.
+Requires the perception layer described in `technical-architecture.md` (T-02, T-03). Adds genuine input interception so that invalid actions are not merely reversed but never occur.
 
 **What v2 actually buys:** closer fidelity to the errorless ideal at the highest prompt levels, particularly for learners whose failure history has produced strong escape behavior around this task. For that population, the difference between "the error was silently undone" and "the error was impossible" may be significant.
 
